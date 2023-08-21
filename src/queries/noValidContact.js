@@ -3,13 +3,11 @@ const { Firebird, options } = require("../conn");
 
 const attachAsync = promisify(Firebird.attach);
 
-async function insertSendedMessage(
+async function noValidContact(
 	designator,
 	pon,
 	formated_schedule_date,
-	whatsapp_id,
 	shift,
-	contacted_phone,
 	service_type
 ) {
 	try {
@@ -23,25 +21,23 @@ async function insertSendedMessage(
                                              ID_WHATSAPP, 
                                              MONITORAMENTO, 
                                              CONTATO_ENVIO, 
-                                             SITUACAO_ENVIO, 
+                                             SITUACAO_ENVIO,
                                              TIPO_SERVICO) 
-									  VALUES(gen_Id(GEN_WHATS,1), 
-											 ?, 
-											 ?, 
-											 ?,
-											 CURRENT_TIMESTAMP, 
-											 ?, 
-											 CAST(? AS VARCHAR(20) CHARACTER SET WIN1252), 
-											 ?,
-											 'PRIMEIRO ENVIO', 
-											 ?)`;
+                                      VALUES(gen_Id(GEN_WHATS,1), 
+                                             ?, 
+                                             ?, 
+                                             ?, 
+                                             CURRENT_TIMESTAMP, 
+                                             '', 
+                                             CAST(? AS VARCHAR(20) CHARACTER SET WIN1252), 
+                                             '', 
+                                             'CONTATO WHATSAPP - SEM CONTATO',
+                                             ?)`;
 		const query_params = [
 			designator,
 			pon,
 			formated_schedule_date,
-			whatsapp_id,
 			shift,
-			contacted_phone,
 			service_type,
 		];
 		const queryAsync = promisify(conn.query);
@@ -49,14 +45,12 @@ async function insertSendedMessage(
 		const result = await queryAsync.call(conn, query, query_params);
 
 		if (result) {
-			console.log("Insert realizado com sucesso na CADWHATS!");
+			console.log("Nenhum contato válido! Insert realizado com sucesso!");
 		}
-
-		conn.detach();
 	} catch (error) {
 		console.log(error);
 		throw error;
 	}
 }
 
-module.exports = { insertSendedMessage };
+module.exports = { noValidContact };

@@ -81,6 +81,7 @@ async function fetchCustomersPhones() {
 		const queryAsync = promisify(conn.query);
 
 		const result = await queryAsync.call(conn, query);
+
 		const valids_contacts = [];
 
 		result.forEach((element) => {
