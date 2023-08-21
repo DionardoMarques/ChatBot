@@ -53,7 +53,6 @@ async function mainMessageProcess(res) {
 			}
 			// Utilizando os contatos armazenado pelo ZeusBot
 			else {
-				// Contato 1 se não for nulo
 				if (contact != null) {
 					// Template (gera custo)
 					// sendConfirmaVisita(
@@ -80,7 +79,6 @@ async function mainMessageProcess(res) {
 						service_type
 					);
 				} else {
-					// Contato 2 se não for nulo
 					if (contact2 != null) {
 						// Template (gera custo)
 						// sendConfirmaVisita(
@@ -107,7 +105,6 @@ async function mainMessageProcess(res) {
 							service_type
 						);
 					} else {
-						// Contato 3 se não for nulo
 						if (contact3 != null) {
 							// Template (Gera custo)
 							// sendConfirmaVisita(
