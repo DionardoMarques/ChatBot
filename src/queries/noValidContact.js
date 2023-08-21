@@ -40,13 +40,12 @@ async function noValidContact(
 			shift,
 			service_type,
 		];
+
 		const queryAsync = promisify(conn.query);
+		await queryAsync.call(conn, query, query_params);
+		console.log("Nenhum contato válido! Insert realizado com sucesso!");
 
-		const result = await queryAsync.call(conn, query, query_params);
-
-		if (result) {
-			console.log("Nenhum contato válido! Insert realizado com sucesso!");
-		}
+		conn.detach();
 	} catch (error) {
 		console.log(error);
 		throw error;

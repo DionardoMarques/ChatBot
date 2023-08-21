@@ -44,13 +44,10 @@ async function insertSendedMessage(
 			contacted_phone,
 			service_type,
 		];
+
 		const queryAsync = promisify(conn.query);
-
-		const result = await queryAsync.call(conn, query, query_params);
-
-		if (result) {
-			console.log("Insert realizado com sucesso na CADWHATS!");
-		}
+		await queryAsync.call(conn, query, query_params);
+		console.log("Insert realizado com sucesso na CADWHATS!");
 
 		conn.detach();
 	} catch (error) {

@@ -167,8 +167,6 @@ async function fetchCustomersPhones() {
 			}
 		});
 
-		console.table(valids_contacts);
-
 		conn.detach();
 
 		return valids_contacts;
