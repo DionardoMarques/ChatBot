@@ -1,0 +1,28 @@
+{ "name": "chatbot",
+  "version": "1.0.0",
+  "description": "Chatbot TLSV WhatsApp Cloud API",
+  "main": "app.js",
+  "devDependencies": {},
+  "scripts": {
+    "start": "node src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DionardoMarques/ChatBot.git"
+  },
+  "author": "Dionardo Marques",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DionardoMarques/ChatBot/issues"
+  },
+  "homepage": "https://github.com/DionardoMarques/ChatBot#readme",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-firebird": "^1.1.5"
+  }
+
+}
