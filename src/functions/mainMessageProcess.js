@@ -12,7 +12,7 @@ async function mainMessageProcess(res) {
 		const valid_contacts = await fetchCustomersPhones();
 		console.table(valid_contacts);
 
-		valid_contacts.forEach((customer) => {
+		for (const customer of valid_contacts) {
 			const service_type = customer[0];
 			const designator = customer[1];
 			const contact_verified = customer[2];
@@ -27,7 +27,7 @@ async function mainMessageProcess(res) {
 			// Utilizando o contato OK (já foi validado/recebeu mensagens) não é nulo
 			if (contact_verified != null) {
 				// Template (gera custo)
-				sendConfirmaVisita(
+				await sendConfirmaVisita(
 					designator,
 					pon,
 					token,
@@ -40,7 +40,7 @@ async function mainMessageProcess(res) {
 				);
 
 				// Teste mensagem livre (sem template/sem cobrança)
-				// sendMessageTest(
+				// await sendMessageTest(
 				// 	designator,
 				// 	pon,
 				// 	token,
@@ -55,7 +55,7 @@ async function mainMessageProcess(res) {
 			else {
 				if (contact != null) {
 					// Template (gera custo)
-					sendConfirmaVisita(
+					await sendConfirmaVisita(
 						designator,
 						pon,
 						token,
@@ -68,7 +68,7 @@ async function mainMessageProcess(res) {
 					);
 
 					// Teste mensagem livre (sem template/sem cobrança)
-					// sendMessageTest(
+					// await sendMessageTest(
 					// 	designator,
 					// 	pon,
 					// 	token,
@@ -81,7 +81,7 @@ async function mainMessageProcess(res) {
 				} else {
 					if (contact2 != null) {
 						// Template (gera custo)
-						sendConfirmaVisita(
+						await sendConfirmaVisita(
 							designator,
 							pon,
 							token,
@@ -94,7 +94,7 @@ async function mainMessageProcess(res) {
 						);
 
 						// Teste mensagem livre (sem template/sem cobrança)
-						// sendMessageTest(
+						// await sendMessageTest(
 						// 	designator,
 						// 	pon,
 						// 	token,
@@ -107,7 +107,7 @@ async function mainMessageProcess(res) {
 					} else {
 						if (contact3 != null) {
 							// Template (Gera custo)
-							sendConfirmaVisita(
+							await sendConfirmaVisita(
 								designator,
 								pon,
 								token,
@@ -120,7 +120,7 @@ async function mainMessageProcess(res) {
 							);
 
 							// Teste mensagem livre (sem template/sem cobrança)
-							// sendMessageTest(
+							// await sendMessageTest(
 							// 	designator,
 							// 	pon,
 							// 	token,
@@ -134,7 +134,7 @@ async function mainMessageProcess(res) {
 							console.log("Não existem números de contato para este cliente!");
 
 							// Insert na CADWHATS para caso não existam telefones
-							noValidContact(
+							await noValidContact(
 								designator,
 								pon,
 								formated_schedule_date,
@@ -145,7 +145,7 @@ async function mainMessageProcess(res) {
 					}
 				}
 			}
-		});
+		}
 
 		return res.sendStatus(200);
 	} catch (error) {

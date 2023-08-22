@@ -79,7 +79,6 @@ async function fetchCustomersPhones() {
                             CADBACKTT.VENCIMENTO,
                             CADBACKTT.TIME_SLOT)`;
 		const queryAsync = promisify(conn.query);
-
 		const result = await queryAsync.call(conn, query);
 
 		const valids_contacts = [];
