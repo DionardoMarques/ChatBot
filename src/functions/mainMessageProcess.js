@@ -27,109 +27,109 @@ async function mainMessageProcess(res) {
 			// Utilizando o contato OK (já foi validado/recebeu mensagens) não é nulo
 			if (contact_verified != null) {
 				// Template (gera custo)
-				// sendConfirmaVisita(
-				// 	designator,
-				// 	pon,
-				// 	token,
-				// 	sender_phone,
-				// 	contact_verified,
-				// 	display_schedule_date,
-				// 	formated_schedule_date,
-				// 	shift,
-				// 	service_type
-				// );
-
-				// Teste mensagem livre (sem template/sem cobrança)
-				sendMessageTest(
+				sendConfirmaVisita(
 					designator,
 					pon,
 					token,
 					sender_phone,
 					contact_verified,
+					display_schedule_date,
 					formated_schedule_date,
 					shift,
 					service_type
 				);
+
+				// Teste mensagem livre (sem template/sem cobrança)
+				// sendMessageTest(
+				// 	designator,
+				// 	pon,
+				// 	token,
+				// 	sender_phone,
+				// 	contact_verified,
+				// 	formated_schedule_date,
+				// 	shift,
+				// 	service_type
+				// );
 			}
 			// Utilizando os contatos armazenado pelo ZeusBot
 			else {
 				if (contact != null) {
 					// Template (gera custo)
-					// sendConfirmaVisita(
-					// 	designator,
-					// 	pon,
-					// 	token,
-					// 	sender_phone,
-					// 	contact,
-					// 	display_schedule_date,
-					// 	formated_schedule_date,
-					// 	shift,
-					// 	service_type
-					// );
-
-					// Teste mensagem livre (sem template/sem cobrança)
-					sendMessageTest(
+					sendConfirmaVisita(
 						designator,
 						pon,
 						token,
 						sender_phone,
 						contact,
+						display_schedule_date,
 						formated_schedule_date,
 						shift,
 						service_type
 					);
+
+					// Teste mensagem livre (sem template/sem cobrança)
+					// sendMessageTest(
+					// 	designator,
+					// 	pon,
+					// 	token,
+					// 	sender_phone,
+					// 	contact,
+					// 	formated_schedule_date,
+					// 	shift,
+					// 	service_type
+					// );
 				} else {
 					if (contact2 != null) {
 						// Template (gera custo)
-						// sendConfirmaVisita(
-						// 	designator,
-						// 	pon,
-						// 	token,
-						// 	sender_phone,
-						// 	contact2,
-						// 	display_schedule_date,
-						// 	formated_schedule_date,
-						// 	shift,
-						// 	service_type
-						// );
-
-						// Teste mensagem livre (sem template/sem cobrança)
-						sendMessageTest(
+						sendConfirmaVisita(
 							designator,
 							pon,
 							token,
 							sender_phone,
 							contact2,
+							display_schedule_date,
 							formated_schedule_date,
 							shift,
 							service_type
 						);
+
+						// Teste mensagem livre (sem template/sem cobrança)
+						// sendMessageTest(
+						// 	designator,
+						// 	pon,
+						// 	token,
+						// 	sender_phone,
+						// 	contact2,
+						// 	formated_schedule_date,
+						// 	shift,
+						// 	service_type
+						// );
 					} else {
 						if (contact3 != null) {
 							// Template (Gera custo)
-							// sendConfirmaVisita(
-							// 	designator,
-							// 	pon,
-							// 	token,
-							// 	sender_phone,
-							// 	contact3,
-							// 	display_schedule_date,
-							// 	formated_schedule_date,
-							// 	shift,
-							// 	service_type
-							// );
-
-							// Teste mensagem livre (sem template/sem cobrança)
-							sendMessageTest(
+							sendConfirmaVisita(
 								designator,
 								pon,
 								token,
 								sender_phone,
 								contact3,
+								display_schedule_date,
 								formated_schedule_date,
 								shift,
 								service_type
 							);
+
+							// Teste mensagem livre (sem template/sem cobrança)
+							// sendMessageTest(
+							// 	designator,
+							// 	pon,
+							// 	token,
+							// 	sender_phone,
+							// 	contact3,
+							// 	formated_schedule_date,
+							// 	shift,
+							// 	service_type
+							// );
 						} else {
 							console.log("Não existem números de contato para este cliente!");
 

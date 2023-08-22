@@ -37,7 +37,7 @@ async function fetchCustomersPhones() {
                             AND SUBSTRING(CADBACKLOG.SERVICO FROM 1 FOR 6) = 'DISPON'
                             AND CADBACKLOG.INSTANCIA <> '0'
                             AND CADBACKLOG.CLUSTER = 'CLUSTER PAE'
-                            AND CADCONTATO.DESIGNADOR = 'PAE-30MJNPON-013'
+                            AND CADCONTATO.DESIGNADOR = 'PAE-81AIT06B7-013'
                             GROUP BY CADBACKLOG.INSTANCIA,
                                     CADCONTATO.CONTATO_OK,
                                     CADCONTATO.CONTATO,

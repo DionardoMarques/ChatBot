@@ -10,10 +10,10 @@ const {
 async function mainWebhookProcess(req, res) {
 	try {
 		// Conteúdo do payload enviado pela API do WPP
-		let body = req.body;
+		const body = req.body;
 
-		const log_message = JSON.stringify(body, null, 2);
-		webhookLog(log_message);
+		const webhook_log_message = JSON.stringify(body, null, 2);
+		webhookLog(webhook_log_message);
 
 		const token = process.env.TOKEN;
 		const sender_phone = process.env.SENDER_PHONE;
@@ -29,9 +29,9 @@ async function mainWebhookProcess(req, res) {
 				body.entry[0].changes[0].value.statuses &&
 				body.entry[0].changes[0].value.statuses[0]
 			) {
-				var message_status = body.entry[0].changes[0].value.statuses[0].status;
-				var whatsapp_id = body.entry[0].changes[0].value.statuses[0].id;
-				var contact_verified =
+				let message_status = body.entry[0].changes[0].value.statuses[0].status;
+				const whatsapp_id = body.entry[0].changes[0].value.statuses[0].id;
+				const contact_verified =
 					body.entry[0].changes[0].value.statuses[0].recipient_id;
 
 				console.log("Status da mensagem: " + message_status);
@@ -39,6 +39,8 @@ async function mainWebhookProcess(req, res) {
 				console.log("Telefone cliente: " + contact_verified);
 
 				// Possíveis errors retornados do webhook
+				let error_code, error_message, error_details;
+
 				if (
 					body.entry[0].changes[0].value.statuses[0].errors &&
 					body.entry[0].changes[0].value.statuses[0].errors[0] &&
@@ -48,18 +50,18 @@ async function mainWebhookProcess(req, res) {
 					body.entry[0].changes[0].value.statuses[0].errors[0].error_data
 						.details
 				) {
-					var error_code =
+					error_code =
 						body.entry[0].changes[0].value.statuses[0].errors[0].code;
-					var error_message =
+					error_message =
 						body.entry[0].changes[0].value.statuses[0].errors[0].message;
-					var error_details =
+					error_details =
 						body.entry[0].changes[0].value.statuses[0].errors[0].error_data
 							.details;
 				}
 
 				// Atualizando o status da mensagem e o CONTATO_OK com parâmetros adicionais de erro
 				if (error_code && error_message && error_details) {
-					processWebhookResponse(
+					await processWebhookResponse(
 						message_status,
 						whatsapp_id,
 						contact_verified,
@@ -70,9 +72,14 @@ async function mainWebhookProcess(req, res) {
 						sender_phone
 					);
 				}
+
 				// Atualizando o status da mensagem e o CONTATO_OK
 				else {
-					processWebhookResponse(message_status, whatsapp_id, contact_verified);
+					await processWebhookResponse(
+						message_status,
+						whatsapp_id,
+						contact_verified
+					);
 				}
 			}
 			// Conteúdo das mensagens sem status
@@ -90,23 +97,25 @@ async function mainWebhookProcess(req, res) {
 				body.entry[0].changes[0].value.messages[0]
 			) {
 				// Conteúdo das mensagens enviadas
-				var sender_phone_id =
+				const sender_phone_id =
 					body.entry[0].changes[0].value.metadata.phone_number_id;
 
+				let whatsapp_id;
+
 				if (body.entry[0].changes[0].value.messages[0].context) {
-					var whatsapp_id =
-						body.entry[0].changes[0].value.messages[0].context.id;
+					whatsapp_id = body.entry[0].changes[0].value.messages[0].context.id;
 				}
-				var customer_phone = body.entry[0].changes[0].value.messages[0].from;
+
+				const customer_phone = body.entry[0].changes[0].value.messages[0].from;
 
 				if (body.entry[0].changes[0].value.messages[0].button) {
-					var reply_button =
+					let reply_button =
 						body.entry[0].changes[0].value.messages[0].button.payload;
 
 					console.log("Payload com interação!");
 
 					// Insert na CADBACKLA2 ou CADBACKACE2
-					insertInteractiveMessageStatus(whatsapp_id, reply_button);
+					await insertInteractiveMessageStatus(whatsapp_id, reply_button);
 
 					// Mensagem resposta para o cliente após interação com a mensagem (botão Confirma ou Não Confirma)
 					axios({
@@ -124,10 +133,10 @@ async function mainWebhookProcess(req, res) {
 						headers: { "Content-Type": "application/json" },
 					})
 						.then((response) => {
-							var res_status = "Response status:" + response.status;
-							var res_data =
+							const res_status = "Response status:" + response.status;
+							const res_data =
 								"Response data:" + JSON.stringify(response.data, null, 2);
-							var log_message =
+							const log_message =
 								"Mensagem resposta interacao \n" + res_status + "\n" + res_data;
 
 							messageLog(log_message);
@@ -136,10 +145,10 @@ async function mainWebhookProcess(req, res) {
 						})
 						.catch((error) => {
 							if (error.response) {
-								var err_status = "Error status:" + error.response.status;
-								var err_data =
+								const err_status = "Error status:" + error.response.status;
+								const err_data =
 									"Error data:" + JSON.stringify(error.response.data, null, 2);
-								var log_message =
+								const log_message =
 									"Mensagem resposta interacao \n" +
 									err_status +
 									"\n" +
@@ -150,8 +159,8 @@ async function mainWebhookProcess(req, res) {
 								console.log(err_status);
 								console.log(err_data);
 							} else {
-								var err = "Error:" + error.message;
-								var log_message = "Mensagem resposta interacao \n" + err;
+								const err = "Error:" + error.message;
+								const log_message = "Mensagem resposta interacao \n" + err;
 
 								messageLog(log_message);
 
@@ -178,10 +187,10 @@ async function mainWebhookProcess(req, res) {
 						headers: { "Content-Type": "application/json" },
 					})
 						.then((response) => {
-							var res_status = "Response status:" + response.status;
-							var res_data =
+							const res_status = "Response status:" + response.status;
+							const res_data =
 								"Response data:" + JSON.stringify(response.data, null, 2);
-							var log_message =
+							const log_message =
 								"Mensagem resposta padrao \n" + res_status + "\n" + res_data;
 
 							messageLog(log_message);
@@ -190,10 +199,10 @@ async function mainWebhookProcess(req, res) {
 						})
 						.catch((error) => {
 							if (error.response) {
-								var err_status = "Error status:" + error.response.status;
-								var err_data =
+								const err_status = "Error status:" + error.response.status;
+								const err_data =
 									"Error data:" + JSON.stringify(error.response.data, null, 2);
-								var log_message =
+								const log_message =
 									"Mensagem resposta padrao \n" + err_status + "\n" + err_data;
 
 								messageLog(log_message);
@@ -201,8 +210,8 @@ async function mainWebhookProcess(req, res) {
 								console.log(err_status);
 								console.log(err_data);
 							} else {
-								var err = "Error:" + error.message;
-								var log_message = "Mensagem resposta padrao \n" + err;
+								const err = "Error:" + error.message;
+								const log_message = "Mensagem resposta padrao \n" + err;
 
 								messageLog(log_message);
 
