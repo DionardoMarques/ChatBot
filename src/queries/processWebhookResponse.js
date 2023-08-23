@@ -296,6 +296,8 @@ async function processWebhookResponse(
 
 				console.log("Status da mensagem atualizado com sucesso!");
 
+				conn.detach();
+
 				await insertTreatments(
 					service_type,
 					schedule_date,
@@ -308,9 +310,8 @@ async function processWebhookResponse(
 			}
 		} else {
 			console.log("ID_WHATSAPP não existe na tabela CADWHATS!");
+			conn.detach();
 		}
-
-		conn.detach();
 	} catch (error) {
 		console.log(error);
 		throw error;

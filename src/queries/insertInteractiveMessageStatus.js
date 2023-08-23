@@ -469,6 +469,8 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 		} else {
 			console.log("ID_WHATSAPP não existe na tabela CADWHATS!");
 		}
+
+		conn.detach();
 	} catch (error) {
 		console.log(error);
 		throw error;
