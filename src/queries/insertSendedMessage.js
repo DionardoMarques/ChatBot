@@ -1,9 +1,7 @@
 const { promisify } = require("util");
-const { Firebird, options } = require("../conn");
-
-const attachAsync = promisify(Firebird.attach);
 
 async function insertSendedMessage(
+	conn,
 	designator,
 	pon,
 	formated_schedule_date,
@@ -13,8 +11,6 @@ async function insertSendedMessage(
 	service_type
 ) {
 	try {
-		const conn = await attachAsync(options);
-
 		const query = `INSERT INTO CADWHATS (NUMERO, 
                                              DESIGNADOR, 
                                              PON, 
@@ -47,9 +43,8 @@ async function insertSendedMessage(
 
 		const queryAsync = promisify(conn.query);
 		await queryAsync.call(conn, query, query_params);
-		console.log("Insert realizado com sucesso na CADWHATS!");
 
-		conn.detach();
+		console.log("Insert realizado com sucesso na CADWHATS!");
 	} catch (error) {
 		console.log(error);
 		throw error;

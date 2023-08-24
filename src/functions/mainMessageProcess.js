@@ -1,3 +1,7 @@
+const { promisify } = require("util");
+const { Firebird, options } = require("../conn");
+
+const attachAsync = promisify(Firebird.attach);
 require("dotenv/config");
 
 const { fetchCustomersPhones } = require("../queries/fetchCustomersPhones");
@@ -5,11 +9,13 @@ const { sendConfirmaVisita, sendMessageTest } = require("../message");
 const { noValidContact } = require("../queries/noValidContact");
 
 async function mainMessageProcess(res) {
+	const conn = await attachAsync(options);
+
 	try {
 		const token = process.env.TOKEN;
 		const sender_phone = process.env.SENDER_PHONE;
 
-		const valid_contacts = await fetchCustomersPhones();
+		const valid_contacts = await fetchCustomersPhones(conn);
 		console.table(valid_contacts);
 
 		for (const customer of valid_contacts) {
@@ -28,6 +34,7 @@ async function mainMessageProcess(res) {
 			if (contact_verified != null) {
 				// Template (gera custo)
 				await sendConfirmaVisita(
+					conn,
 					designator,
 					pon,
 					token,
@@ -41,6 +48,7 @@ async function mainMessageProcess(res) {
 
 				// Teste mensagem livre (sem template/sem cobrança)
 				// await sendMessageTest(
+				// 	conn,
 				// 	designator,
 				// 	pon,
 				// 	token,
@@ -56,6 +64,7 @@ async function mainMessageProcess(res) {
 				if (contact != null) {
 					// Template (gera custo)
 					await sendConfirmaVisita(
+						conn,
 						designator,
 						pon,
 						token,
@@ -69,6 +78,7 @@ async function mainMessageProcess(res) {
 
 					// Teste mensagem livre (sem template/sem cobrança)
 					// await sendMessageTest(
+					// 	conn,
 					// 	designator,
 					// 	pon,
 					// 	token,
@@ -82,6 +92,7 @@ async function mainMessageProcess(res) {
 					if (contact2 != null) {
 						// Template (gera custo)
 						await sendConfirmaVisita(
+							conn,
 							designator,
 							pon,
 							token,
@@ -95,6 +106,7 @@ async function mainMessageProcess(res) {
 
 						// Teste mensagem livre (sem template/sem cobrança)
 						// await sendMessageTest(
+						// 	conn,
 						// 	designator,
 						// 	pon,
 						// 	token,
@@ -108,6 +120,7 @@ async function mainMessageProcess(res) {
 						if (contact3 != null) {
 							// Template (Gera custo)
 							await sendConfirmaVisita(
+								conn,
 								designator,
 								pon,
 								token,
@@ -121,6 +134,7 @@ async function mainMessageProcess(res) {
 
 							// Teste mensagem livre (sem template/sem cobrança)
 							// await sendMessageTest(
+							// 	conn,
 							// 	designator,
 							// 	pon,
 							// 	token,
@@ -135,6 +149,7 @@ async function mainMessageProcess(res) {
 
 							// Insert na CADWHATS para caso não existam telefones
 							await noValidContact(
+								conn,
 								designator,
 								pon,
 								formated_schedule_date,
@@ -151,6 +166,8 @@ async function mainMessageProcess(res) {
 	} catch (error) {
 		console.log(error);
 		throw error;
+	} finally {
+		conn.detach();
 	}
 }
 

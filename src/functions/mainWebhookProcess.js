@@ -1,3 +1,7 @@
+const { promisify } = require("util");
+const { Firebird, options } = require("../conn");
+
+const attachAsync = promisify(Firebird.attach);
 const axios = require("axios");
 require("dotenv/config");
 
@@ -8,6 +12,8 @@ const {
 } = require("../queries/insertInteractiveMessageStatus");
 
 async function mainWebhookProcess(req, res) {
+	const conn = await attachAsync(options);
+
 	try {
 		// Conteúdo do payload enviado pela API do WPP
 		const body = req.body;
@@ -62,6 +68,7 @@ async function mainWebhookProcess(req, res) {
 				// Atualizando o status da mensagem e o CONTATO_OK com parâmetros adicionais de erro
 				if (error_code && error_message && error_details) {
 					await processWebhookResponse(
+						conn,
 						message_status,
 						whatsapp_id,
 						contact_verified,
@@ -76,6 +83,7 @@ async function mainWebhookProcess(req, res) {
 				// Atualizando o status da mensagem e o CONTATO_OK
 				else {
 					await processWebhookResponse(
+						conn,
 						message_status,
 						whatsapp_id,
 						contact_verified
@@ -115,7 +123,7 @@ async function mainWebhookProcess(req, res) {
 					console.log("Payload com interação!");
 
 					// Insert na CADBACKLA2 ou CADBACKACE2
-					await insertInteractiveMessageStatus(whatsapp_id, reply_button);
+					await insertInteractiveMessageStatus(conn, whatsapp_id, reply_button);
 
 					// Mensagem resposta para o cliente após interação com a mensagem (botão Confirma ou Não Confirma)
 					axios({
@@ -227,6 +235,8 @@ async function mainWebhookProcess(req, res) {
 	} catch (error) {
 		console.log(error);
 		throw error;
+	} finally {
+		conn.detach();
 	}
 }
 

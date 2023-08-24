@@ -3,6 +3,7 @@ const { messageLog } = require("./logger");
 const { insertSendedMessage } = require("./queries/insertSendedMessage");
 
 async function sendConfirmaVisita(
+	conn,
 	designator,
 	pon,
 	token,
@@ -60,6 +61,7 @@ async function sendConfirmaVisita(
 
 		// Insert na CADWHATS
 		await insertSendedMessage(
+			conn,
 			designator,
 			pon,
 			formated_schedule_date,
@@ -99,6 +101,7 @@ async function sendConfirmaVisita(
 }
 
 async function sendMessageTest(
+	conn,
 	designator,
 	pon,
 	token,
@@ -133,6 +136,7 @@ async function sendMessageTest(
 
 		// Insert na CADWHATS
 		await insertSendedMessage(
+			conn,
 			designator,
 			pon,
 			formated_schedule_date,

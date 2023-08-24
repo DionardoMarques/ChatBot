@@ -1,9 +1,6 @@
 const { promisify } = require("util");
-const { Firebird, options } = require("../conn");
 
-const attachAsync = promisify(Firebird.attach);
-
-async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
+async function insertInteractiveMessageStatus(conn, whatsapp_id, reply_button) {
 	try {
 		console.log("Botão interagido:", reply_button);
 
@@ -15,8 +12,6 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 		} else {
 			console.log("Payload inesperado!");
 		}
-
-		const conn = await attachAsync(options);
 
 		// Buscando os dados da mensagem na CADWHATS baseado no ID_WHATSAPP
 		const query = `SELECT PON,
@@ -61,7 +56,7 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
                                         CADCONTATO.CONTATO,
                                         CADCONTATO.CONTATO2,
                                         CADCONTATO.CONTATO3,
-                                        COALESCE(MAX(CADBACKLA2.SEQUENCIA),0) AS SEQUENCIA,
+                                        CAST(COALESCE(MAX(CADBACKLA2.SEQUENCIA),0) AS INTEGER) + 1 AS SEQUENCIA,
                                         CADBACKLOG.BA,
                                         CAST(CADBACKLOG.CIDADE AS VARCHAR(150) CHARACTER SET WIN1252) AS CIDADE,
                                         CAST(CADBACKLOG.CLUSTER AS VARCHAR(30) CHARACTER SET WIN1252) AS CLUSTER,
@@ -122,7 +117,7 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 				// Atribuindo a cada variável o retorno da query
 				const query_designator = result[0].DESIGNADOR;
 				const query_contact_verified = result[0].CONTATO_OK;
-				const query_sequence = result[0].SEQUENCIA + 1;
+				const query_sequence = result[0].SEQUENCIA;
 				const query_ba = result[0].BA?.trim();
 				const query_city = result[0].CIDADE;
 				const query_cluster = result[0].CLUSTER;
@@ -176,8 +171,8 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
                                                                       ASSISTENTE,
                                                                       DATA_INJECAO,
                                                                       TRATATIVAS,
-                                                                      OBSERVACAO,
-                                                                      CONTATO_CLIENTE_1)
+                                                                      CONTATO_CLIENTE_1,
+                                                                      ID_WHATSAPP)
                                                                VALUES(gen_Id(GEN_BACKLA2, 1),
                                                                       ?,
                                                                       ?,
@@ -226,8 +221,8 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 					query_micro_area,
 					injection_date_aux,
 					reply_button,
-					whatsapp_id,
 					query_contact_verified,
+					whatsapp_id,
 				];
 				const queryAsync2 = promisify(conn.query);
 				await queryAsync2.call(conn, query2, query2_params);
@@ -241,86 +236,86 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 
 				// Select para o insert dos dados necessários na CADBACKACE2
 				const query = `SELECT DISTINCT
-                                        CAST(CADBACKTT.ISNTANCIA AS VARCHAR(25) CHARACTER SET WIN1252) AS DESIGNADOR,
-                                        CADCONTATO.CONTATO_OK,
-                                        CASE WHEN CADCONTATO.CONTATO = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO END AS CONTATO,
-                                        CASE WHEN CADCONTATO.CONTATO2 = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO2 END AS CONTATO2,
-                                        CASE WHEN CADCONTATO.CONTATO3 = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO3 END AS CONTATO3,
-                                        COALESCE(MAX(CADBACKACE2.SEQUENCIA),0) AS SEQUENCIA,
-                                        CAST(CADBACKTT.CODIGO_SS AS VARCHAR(20) CHARACTER SET WIN1252) AS CODIGO_SS,
-                                        CAST(CADBACKTT.ARMARIO AS VARCHAR(20) CHARACTER SET WIN1252) AS ARMARIO,
-                                        CAST(CADBACKTT.STATUS AS VARCHAR(30) CHARACTER SET WIN1252) AS STATUS,
-                                        CAST(CADBACKTT.RESPONSAVEL_STATUS AS VARCHAR(60) CHARACTER SET WIN1252) AS RESPONSAVEL_STATUS,
-                                        CAST(CADBACKTT.MOTIVO_STATUS AS VARCHAR(60) CHARACTER SET WIN1252) AS MOTIVO_STATUS,
-                                        CAST(CADBACKTT.DEFEITO AS VARCHAR(30) CHARACTER SET WIN1252) AS DEFEITO,
-                                        CAST(CADBACKTT.EMPRESA AS VARCHAR(30) CHARACTER SET WIN1252) AS EMPRESA,
-                                        CAST(CADBACKTT.CLUSTER AS VARCHAR(30) CHARACTER SET WIN1252) AS CLUSTER,
-                                        CAST(CADBACKTT.CIDADE AS VARCHAR(80) CHARACTER SET WIN1252) AS CIDADE,
-                                        CAST(CADBACKTT.UF AS VARCHAR(5) CHARACTER SET WIN1252) AS UF,
-                                        CAST(CADBACKTT.LOGRADOURO AS VARCHAR(255) CHARACTER SET WIN1252) AS LOGRADOURO,
-                                        CADBACKTT.ABERTURA,
-                                        CADBACKTT.VENCIMENTO,
-                                        CASE
-                                        WHEN (CADBACKTT.TIME_SLOT = '08:00-12:00' OR CADBACKTT.TIME_SLOT = '08:30-10:30' OR CADBACKTT.TIME_SLOT = '10:00-12:00') THEN 'MANHÃ'
-                                        WHEN (CADBACKTT.TIME_SLOT = '12:00-18:00' OR CADBACKTT.TIME_SLOT = '13:00-15:30' OR CADBACKTT.TIME_SLOT = '15:30-18:00') THEN 'TARDE'
-                                        ELSE NULL END AS MONITORAMENTO,
-                                        CAST(CADBACKTT.TIPO_SS AS VARCHAR(255) CHARACTER SET WIN1252) AS TIPO_SS,
-                                        CAST(CADBACKTT.TIPO_AGENDA AS VARCHAR(150) CHARACTER SET WIN1252) AS TIPO_AGENDA,
-                                        CAST(CADBACKTT.AREA_GVT AS VARCHAR(100) CHARACTER SET WIN1252) AS AREA_GVT,
-                                        CADBACKTT.GPON,
-                                        CAST(CADBACKTT.SUPERVISOR AS VARCHAR(80) CHARACTER SET WIN1252) AS SUPERVISOR,
-                                        CAST(CADBACKTT.SEGMENTO AS VARCHAR(30) CHARACTER SET WIN1252) AS SEGMENTO,
-                                        CADBACKTT.PRIMEIRA_AGENDA,
-                                        CAST(CADBACKTT.ABERTURA_SIEBEL AS VARCHAR(100) CHARACTER SET WIN1252) AS ABERTURA_SIEBEL,
-                                        CADBACKTT.PREVENTIVA,
-                                        CADBACKTT.ABERTURA_AUX,
-                                        CAST(CADBACKTT.SPLITTER AS VARCHAR(30) CHARACTER SET WIN1252) AS SPLITTER,
-                                        CAST(CADBACKTT.CAIXA AS VARCHAR(30) CHARACTER SET WIN1252) AS CAIXA,
-                                        CAST(CADBACKTT.SPLITTER_2 AS VARCHAR(30) CHARACTER SET WIN1252) AS SPLITTER_2,
-                                        CADBACKTT.SECUNDARIO
-                                FROM CADBACKTT
-                                INNER JOIN CADCONTATO ON(CADBACKTT.ISNTANCIA = CADCONTATO.DESIGNADOR)
-                                LEFT OUTER JOIN CADBACKACE2 ON (CADBACKTT.ISNTANCIA = CADBACKACE2.INSTANCIA) AND (CADBACKTT.ABERTURA_AUX  = CADBACKACE2.ABERTURA_AUX)
-                                WHERE CADBACKTT.VENCIMENTO >= ?
-                                AND CADBACKTT.VENCIMENTO < ?
-                                AND CADBACKTT.STATUS = 'AGENDADA'
-                                AND CADBACKTT.EMPRESA = 'TLSV'
-                                AND CADBACKTT.CLUSTER = 'CLUSTER PAE'
-                                AND CADBACKTT.CODIGO_SS = ?
-                                GROUP BY CADBACKTT.ISNTANCIA,
-                                        CADCONTATO.CONTATO_OK,
-                                        CADCONTATO.CONTATO,
-                                        CADCONTATO.CONTATO2,
-                                        CADCONTATO.CONTATO3,
-                                        CADBACKTT.CODIGO_SS,
-                                        CADBACKTT.ISNTANCIA,
-                                        CADBACKTT.ARMARIO,
-                                        CADBACKTT.STATUS,
-                                        CADBACKTT.RESPONSAVEL_STATUS,
-                                        CADBACKTT.MOTIVO_STATUS,
-                                        CADBACKTT.DEFEITO,
-                                        CADBACKTT.EMPRESA,
-                                        CADBACKTT.CLUSTER,
-                                        CADBACKTT.CIDADE,
-                                        CADBACKTT.UF,
-                                        CADBACKTT.LOGRADOURO,
-                                        CADBACKTT.ABERTURA,
-                                        CADBACKTT.VENCIMENTO,
-                                        CADBACKTT.TIPO_SS,
-                                        CADBACKTT.TIPO_AGENDA,
-                                        CADBACKTT.AREA_GVT,
-                                        CADBACKTT.GPON,
-                                        CADBACKTT.SUPERVISOR,
-                                        CADBACKTT.SEGMENTO,
-                                        CADBACKTT.PRIMEIRA_AGENDA,
-                                        CADBACKTT.ABERTURA_SIEBEL,
-                                        CADBACKTT.PREVENTIVA,
-                                        CADBACKTT.ABERTURA_AUX,
-                                        CADBACKTT.SPLITTER,
-                                        CADBACKTT.CAIXA,
-                                        CADBACKTT.SPLITTER_2,
-                                        CADBACKTT.SECUNDARIO,
-                                        CADBACKTT.TIME_SLOT`;
+                                                 CAST(CADBACKTT.ISNTANCIA AS VARCHAR(25) CHARACTER SET WIN1252) AS DESIGNADOR,
+                                                 CADCONTATO.CONTATO_OK,
+                                                 CASE WHEN CADCONTATO.CONTATO = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO END AS CONTATO,
+                                                 CASE WHEN CADCONTATO.CONTATO2 = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO2 END AS CONTATO2,
+                                                 CASE WHEN CADCONTATO.CONTATO3 = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO3 END AS CONTATO3,
+                                                 CAST(COALESCE(MAX(CADBACKACE2.SEQUENCIA),0) AS INTEGER) + 1 AS SEQUENCIA,
+                                                 CAST(CADBACKTT.CODIGO_SS AS VARCHAR(20) CHARACTER SET WIN1252) AS CODIGO_SS,
+                                                 CAST(CADBACKTT.ARMARIO AS VARCHAR(20) CHARACTER SET WIN1252) AS ARMARIO,
+                                                 CAST(CADBACKTT.STATUS AS VARCHAR(30) CHARACTER SET WIN1252) AS STATUS,
+                                                 CAST(CADBACKTT.RESPONSAVEL_STATUS AS VARCHAR(60) CHARACTER SET WIN1252) AS RESPONSAVEL_STATUS,
+                                                 CAST(CADBACKTT.MOTIVO_STATUS AS VARCHAR(60) CHARACTER SET WIN1252) AS MOTIVO_STATUS,
+                                                 CAST(CADBACKTT.DEFEITO AS VARCHAR(30) CHARACTER SET WIN1252) AS DEFEITO,
+                                                 CAST(CADBACKTT.EMPRESA AS VARCHAR(30) CHARACTER SET WIN1252) AS EMPRESA,
+                                                 CAST(CADBACKTT.CLUSTER AS VARCHAR(30) CHARACTER SET WIN1252) AS CLUSTER,
+                                                 CAST(CADBACKTT.CIDADE AS VARCHAR(80) CHARACTER SET WIN1252) AS CIDADE,
+                                                 CAST(CADBACKTT.UF AS VARCHAR(5) CHARACTER SET WIN1252) AS UF,
+                                                 CAST(CADBACKTT.LOGRADOURO AS VARCHAR(255) CHARACTER SET WIN1252) AS LOGRADOURO,
+                                                 CADBACKTT.ABERTURA,
+                                                 CADBACKTT.VENCIMENTO,
+                                                 CASE
+                                                 WHEN (CADBACKTT.TIME_SLOT = '08:00-12:00' OR CADBACKTT.TIME_SLOT = '08:30-10:30' OR CADBACKTT.TIME_SLOT = '10:00-12:00') THEN 'MANHÃ'
+                                                 WHEN (CADBACKTT.TIME_SLOT = '12:00-18:00' OR CADBACKTT.TIME_SLOT = '13:00-15:30' OR CADBACKTT.TIME_SLOT = '15:30-18:00') THEN 'TARDE'
+                                                 ELSE NULL END AS MONITORAMENTO,
+                                                 CAST(CADBACKTT.TIPO_SS AS VARCHAR(255) CHARACTER SET WIN1252) AS TIPO_SS,
+                                                 CAST(CADBACKTT.TIPO_AGENDA AS VARCHAR(150) CHARACTER SET WIN1252) AS TIPO_AGENDA,
+                                                 CAST(CADBACKTT.AREA_GVT AS VARCHAR(100) CHARACTER SET WIN1252) AS AREA_GVT,
+                                                 CADBACKTT.GPON,
+                                                 CAST(CADBACKTT.SUPERVISOR AS VARCHAR(80) CHARACTER SET WIN1252) AS SUPERVISOR,
+                                                 CAST(CADBACKTT.SEGMENTO AS VARCHAR(30) CHARACTER SET WIN1252) AS SEGMENTO,
+                                                 CADBACKTT.PRIMEIRA_AGENDA,
+                                                 CAST(CADBACKTT.ABERTURA_SIEBEL AS VARCHAR(100) CHARACTER SET WIN1252) AS ABERTURA_SIEBEL,
+                                                 CADBACKTT.PREVENTIVA,
+                                                 CADBACKTT.ABERTURA_AUX,
+                                                 CAST(CADBACKTT.SPLITTER AS VARCHAR(30) CHARACTER SET WIN1252) AS SPLITTER,
+                                                 CAST(CADBACKTT.CAIXA AS VARCHAR(30) CHARACTER SET WIN1252) AS CAIXA,
+                                                 CAST(CADBACKTT.SPLITTER_2 AS VARCHAR(30) CHARACTER SET WIN1252) AS SPLITTER_2,
+                                                 CADBACKTT.SECUNDARIO
+                                          FROM CADBACKTT
+                                          INNER JOIN CADCONTATO ON(CADBACKTT.ISNTANCIA = CADCONTATO.DESIGNADOR)
+                                          LEFT OUTER JOIN CADBACKACE2 ON (CADBACKTT.ISNTANCIA = CADBACKACE2.INSTANCIA) AND (CADBACKTT.ABERTURA_AUX  = CADBACKACE2.ABERTURA_AUX)
+                                          WHERE CADBACKTT.VENCIMENTO >= ?
+                                          AND CADBACKTT.VENCIMENTO < ?
+                                          AND CADBACKTT.STATUS = 'AGENDADA'
+                                          AND CADBACKTT.EMPRESA = 'TLSV'
+                                          AND CADBACKTT.CLUSTER = 'CLUSTER PAE'
+                                          AND CADBACKTT.CODIGO_SS = ?
+                                          GROUP BY CADBACKTT.ISNTANCIA,
+                                                 CADCONTATO.CONTATO_OK,
+                                                 CADCONTATO.CONTATO,
+                                                 CADCONTATO.CONTATO2,
+                                                 CADCONTATO.CONTATO3,
+                                                 CADBACKTT.CODIGO_SS,
+                                                 CADBACKTT.ISNTANCIA,
+                                                 CADBACKTT.ARMARIO,
+                                                 CADBACKTT.STATUS,
+                                                 CADBACKTT.RESPONSAVEL_STATUS,
+                                                 CADBACKTT.MOTIVO_STATUS,
+                                                 CADBACKTT.DEFEITO,
+                                                 CADBACKTT.EMPRESA,
+                                                 CADBACKTT.CLUSTER,
+                                                 CADBACKTT.CIDADE,
+                                                 CADBACKTT.UF,
+                                                 CADBACKTT.LOGRADOURO,
+                                                 CADBACKTT.ABERTURA,
+                                                 CADBACKTT.VENCIMENTO,
+                                                 CADBACKTT.TIPO_SS,
+                                                 CADBACKTT.TIPO_AGENDA,
+                                                 CADBACKTT.AREA_GVT,
+                                                 CADBACKTT.GPON,
+                                                 CADBACKTT.SUPERVISOR,
+                                                 CADBACKTT.SEGMENTO,
+                                                 CADBACKTT.PRIMEIRA_AGENDA,
+                                                 CADBACKTT.ABERTURA_SIEBEL,
+                                                 CADBACKTT.PREVENTIVA,
+                                                 CADBACKTT.ABERTURA_AUX,
+                                                 CADBACKTT.SPLITTER,
+                                                 CADBACKTT.CAIXA,
+                                                 CADBACKTT.SPLITTER_2,
+                                                 CADBACKTT.SECUNDARIO,
+                                                 CADBACKTT.TIME_SLOT`;
 				const query_params = [
 					formated_schedule_date,
 					formated_expire_date,
@@ -332,7 +327,7 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 				// Atribuindo a cada variável o retorno da query
 				const query_designator = result[0].DESIGNADOR;
 				const query_contact_verified = result[0].CONTATO_OK;
-				const query_sequence = result[0].SEQUENCIA + 1;
+				const query_sequence = result[0].SEQUENCIA;
 				const query_code_ss = result[0].CODIGO_SS?.trim();
 				const query_cabinet = result[0].ARMARIO;
 				const query_status = result[0].STATUS;
@@ -372,56 +367,76 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 				injection_date_aux = month + "/" + day + "/" + year;
 
 				// Inserindo na CADBACKACE2 os dados do select query5
-				const query2 = `INSERT INTO CADBACKLA2 (NUMERO,
-                                                                      SEQUENCIA,
-                                                                      PON,
-                                                                      CIDADE,
+				const query2 = `INSERT INTO CADBACKACE2 (CODIGO, 
+                                                                      CODIGO_SS,
+                                                                      INSTANCIA, 
+                                                                      ARMARIO, 
+                                                                      STATUS, 
+                                                                      RESPONSAVEL_STATUS, 
+                                                                      MOTIVO_STATUS, 
+                                                                      DEFEITO, 
+                                                                      EMPRESA, 
                                                                       CLUSTER,
-                                                                      ARMARIO,
-                                                                      CLIENTE,
+                                                                      CIDADE,
+                                                                      UF,
                                                                       LOGRADOURO,
-                                                                      TECNOLOGIA,
                                                                       ABERTURA,
-                                                                      INSTANCIA,
-                                                                      SERVICO,
-                                                                      STATUS,
-                                                                      MOTIVO,
-                                                                      STATUS_BA,
-                                                                      DATA_PROMESSA,
-                                                                      DATA_VENDA,
-                                                                      DESC_DETALHADA,
+                                                                      VENCIMENTO,
+                                                                      TIPO_SS,
+                                                                      TIPO_AGENDA,
+                                                                      AREA_GVT,
+                                                                      GPON,
+                                                                      SUPERVISOR,
+                                                                      SEGMENTO,
+                                                                      PRIMEIRA_AGENDA,
+                                                                      ABERTURA_SIEBEL,
+                                                                      PREVENTIVA,
                                                                       ABERTURA_AUX,
-                                                                      MICRO_AREA,
-                                                                      DATA_INJECAO_AUX,
+                                                                      SPLITTER,
+                                                                      CAIXA,
+                                                                      SPLITTER_2,
+                                                                      SECUNDARIO,
                                                                       ASSISTENTE,
                                                                       DATA_INJECAO,
                                                                       TRATATIVAS,
-                                                                      OBSERVACAO,
-                                                                      CONTATO_CLIENTE_1)
-                                                               VALUES(gen_Id(GEN_BACKLA2, 1),
-                                                                      ?,
-                                                                      ?,
-                                                                      CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      SEQUENCIA,
+                                                                      DATA_INJECAO_AUX,
+                                                                      CONTATO_CLIENTE_1,
+                                                                      ID_WHATSAPP)
+                                                        VALUES(gen_Id(GEN_BACKACE2, 1),
                                                                       CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
-                                                                      ?,
                                                                       CAST(? AS VARCHAR(25) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(15) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(20) CHARACTER SET WIN1252), 
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(60) CHARACTER SET WIN1252), 
+                                                                      CAST(? AS VARCHAR(60) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(80) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(5) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
+                                                                      ?,
+                                                                      ?,
+                                                                      CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
                                                                       CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                                      CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(100) CHARACTER SET WIN1252),
+                                                                      ?,
+                                                                      CAST(? AS VARCHAR(80) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      ?,
+                                                                      CAST(? AS VARCHAR(100) CHARACTER SET WIN1252),
                                                                       ?,
                                                                       ?,
-                                                                      CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                                      ?,
-                                                                      CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+                                                                      CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
                                                                       ?,
                                                                       3973,
                                                                       CURRENT_TIMESTAMP,
                                                                       CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
+                                                                      ?,
+                                                                      ?,
                                                                       ?,
                                                                       ?)`;
 				const query2_params = [
@@ -456,8 +471,8 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 					reply_button,
 					query_sequence,
 					injection_date_aux,
-					whatsapp_id,
 					query_contact_verified,
+					whatsapp_id,
 				];
 				const queryAsync2 = promisify(conn.query);
 				await queryAsync2.call(conn, query2, query2_params);
@@ -469,8 +484,6 @@ async function insertInteractiveMessageStatus(whatsapp_id, reply_button) {
 		} else {
 			console.log("ID_WHATSAPP não existe na tabela CADWHATS!");
 		}
-
-		conn.detach();
 	} catch (error) {
 		console.log(error);
 		throw error;

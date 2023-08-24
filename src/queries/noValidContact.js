@@ -1,9 +1,7 @@
 const { promisify } = require("util");
-const { Firebird, options } = require("../conn");
-
-const attachAsync = promisify(Firebird.attach);
 
 async function noValidContact(
+	conn,
 	designator,
 	pon,
 	formated_schedule_date,
@@ -11,8 +9,6 @@ async function noValidContact(
 	service_type
 ) {
 	try {
-		const conn = await attachAsync(options);
-
 		const query = `INSERT INTO CADWHATS (NUMERO, 
                                              DESIGNADOR, 
                                              PON, 
@@ -43,9 +39,8 @@ async function noValidContact(
 
 		const queryAsync = promisify(conn.query);
 		await queryAsync.call(conn, query, query_params);
-		console.log("Nenhum contato válido! Insert realizado com sucesso!");
 
-		conn.detach();
+		console.log("Nenhum contato válido! Insert realizado com sucesso!");
 	} catch (error) {
 		console.log(error);
 		throw error;

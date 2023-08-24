@@ -1,12 +1,7 @@
 const { promisify } = require("util");
-const { Firebird, options } = require("../conn");
 
-const attachAsync = promisify(Firebird.attach);
-
-async function fetchCustomersPhones() {
+async function fetchCustomersPhones(conn) {
 	try {
-		const conn = await attachAsync(options);
-
 		// Remover os filtros CADCONTATO.DESIGNADOR -- Apenas para teste
 		const query = `SELECT SERVICO,
                               DESIGNADOR,
@@ -37,7 +32,7 @@ async function fetchCustomersPhones() {
                             AND SUBSTRING(CADBACKLOG.SERVICO FROM 1 FOR 6) = 'DISPON'
                             AND CADBACKLOG.INSTANCIA <> '0'
                             AND CADBACKLOG.CLUSTER = 'CLUSTER PAE'
-                            AND CADCONTATO.DESIGNADOR = 'KDK-8176E6QMVV-013'
+                            AND CADCONTATO.DESIGNADOR = 'X'
                             GROUP BY CADBACKLOG.INSTANCIA,
                                     CADCONTATO.CONTATO_OK,
                                     CADCONTATO.CONTATO,
@@ -69,7 +64,7 @@ async function fetchCustomersPhones() {
                             AND CADBACKTT.STATUS = 'AGENDADA' 
                             AND CADBACKTT.EMPRESA = 'TLSV' 
                             AND CADBACKTT.CLUSTER = 'CLUSTER PAE'
-                            AND CADCONTATO.DESIGNADOR = 'X'
+                            AND CADCONTATO.DESIGNADOR = 'PAE-814T9JA5XI-013'
                         GROUP BY CADBACKTT.ISNTANCIA,
                             CADCONTATO.CONTATO_OK,
                             CADCONTATO.CONTATO,
@@ -165,8 +160,6 @@ async function fetchCustomersPhones() {
 				]);
 			}
 		});
-
-		conn.detach();
 
 		return valids_contacts;
 	} catch (error) {

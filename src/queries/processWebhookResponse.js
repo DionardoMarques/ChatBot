@@ -1,11 +1,9 @@
 const { promisify } = require("util");
-const { Firebird, options } = require("../conn");
-
-const attachAsync = promisify(Firebird.attach);
 
 const { sendConfirmaVisita, sendMessageTest } = require("../message");
 
 async function processWebhookResponse(
+	conn,
 	message_status,
 	whatsapp_id,
 	contact_verified,
@@ -16,8 +14,6 @@ async function processWebhookResponse(
 	sender_phone
 ) {
 	try {
-		const conn = await attachAsync(options);
-
 		// Buscando os dados da mensagem na CADWHATS baseado no ID_WHATSAPP
 		const query = `SELECT DESIGNADOR,
                               PON,
@@ -66,6 +62,7 @@ async function processWebhookResponse(
 				const query_params = [message_status, whatsapp_id];
 				const queryAsync = promisify(conn.query);
 				await queryAsync.call(conn, query, query_params);
+
 				console.log("Status da mensagem atualizado com sucesso!");
 
 				// Verificando se as variáveis de erro estão setadas
@@ -296,9 +293,8 @@ async function processWebhookResponse(
 
 				console.log("Status da mensagem atualizado com sucesso!");
 
-				conn.detach();
-
 				await insertTreatments(
+					conn,
 					service_type,
 					schedule_date,
 					formated_schedule_date,
@@ -310,7 +306,6 @@ async function processWebhookResponse(
 			}
 		} else {
 			console.log("ID_WHATSAPP não existe na tabela CADWHATS!");
-			conn.detach();
 		}
 	} catch (error) {
 		console.log(error);
@@ -319,6 +314,7 @@ async function processWebhookResponse(
 }
 
 async function insertTreatments(
+	conn,
 	service_type,
 	schedule_date,
 	formated_schedule_date,
@@ -330,7 +326,11 @@ async function insertTreatments(
 	try {
 		console.log(service_type);
 
-		const conn = await attachAsync(options);
+		if (message_status == "CONTATO WHATSAPP - ENTREGUE") {
+			const delay = 1;
+
+			await new Promise((resolve) => setTimeout(resolve, delay * 1000));
+		}
 
 		// Insert tratativas CADBACKLA2
 		if (service_type == "BA") {
@@ -343,7 +343,7 @@ async function insertTreatments(
                                 CADCONTATO.CONTATO,
                                 CADCONTATO.CONTATO2,
                                 CADCONTATO.CONTATO3,
-                                COALESCE(MAX(CADBACKLA2.SEQUENCIA),0) AS SEQUENCIA,
+                                CAST(COALESCE(MAX(CADBACKLA2.SEQUENCIA),0) AS INTEGER) + 1 AS SEQUENCIA,
                                 CADBACKLOG.BA,
                                 CAST(CADBACKLOG.CIDADE AS VARCHAR(150) CHARACTER SET WIN1252) AS CIDADE,
                                 CAST(CADBACKLOG.CLUSTER AS VARCHAR(30) CHARACTER SET WIN1252) AS CLUSTER,
@@ -404,7 +404,7 @@ async function insertTreatments(
 			// Atribuindo a cada variável o retorno da query
 			const query_designator = result[0].DESIGNADOR;
 			const query_contact_verified = result[0].CONTATO_OK;
-			const query_sequence = result[0].SEQUENCIA + 1;
+			const query_sequence = result[0].SEQUENCIA;
 			const query_ba = result[0].BA?.trim();
 			const query_city = result[0].CIDADE;
 			const query_cluster = result[0].CLUSTER;
@@ -459,8 +459,8 @@ async function insertTreatments(
                                                   ASSISTENTE,
                                                   DATA_INJECAO,
                                                   TRATATIVAS,
-                                                  OBSERVACAO,
-                                                  CONTATO_CLIENTE_1)
+                                                  CONTATO_CLIENTE_1,
+												  ID_WHATSAPP)
                                            VALUES(gen_Id(GEN_BACKLA2, 1),
                                                   ?,
                                                   ?,
@@ -512,8 +512,8 @@ async function insertTreatments(
                                                   ASSISTENTE,
                                                   DATA_INJECAO,
                                                   TRATATIVAS,
-                                                  OBSERVACAO,
-                                                  CONTATO_CLIENTE_1)
+                                                  CONTATO_CLIENTE_1,
+												  ID_WHATSAPP)
                                            VALUES(gen_Id(GEN_BACKLA2, 1),
                                                   ?,
                                                   ?,
@@ -563,8 +563,8 @@ async function insertTreatments(
 				query_micro_area,
 				injection_date_aux,
 				message_status,
-				whatsapp_id,
 				query_contact_verified,
+				whatsapp_id,
 			];
 			const queryAsync2 = promisify(conn.query);
 			await queryAsync2.call(conn, query2, query2_params);
@@ -583,7 +583,7 @@ async function insertTreatments(
                                     CASE WHEN CADCONTATO.CONTATO = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO END AS CONTATO,
                                     CASE WHEN CADCONTATO.CONTATO2 = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO2 END AS CONTATO2,
                                     CASE WHEN CADCONTATO.CONTATO3 = 'Nao encontrado' THEN NULL ELSE CADCONTATO.CONTATO3 END AS CONTATO3,
-                                    COALESCE(MAX(CADBACKACE2.SEQUENCIA),0) AS SEQUENCIA,
+									CAST(COALESCE(MAX(CADBACKACE2.SEQUENCIA),0) AS INTEGER) + 1 AS SEQUENCIA,
                                     CAST(CADBACKTT.CODIGO_SS AS VARCHAR(20) CHARACTER SET WIN1252) AS CODIGO_SS,
                                     CAST(CADBACKTT.ARMARIO AS VARCHAR(20) CHARACTER SET WIN1252) AS ARMARIO,
                                     CAST(CADBACKTT.STATUS AS VARCHAR(30) CHARACTER SET WIN1252) AS STATUS,
@@ -665,7 +665,7 @@ async function insertTreatments(
 			// Atribuindo a cada variável o retorno da query
 			const query_designator = result[0].DESIGNADOR;
 			const query_contact_verified = result[0].CONTATO_OK;
-			const query_sequence = result[0].SEQUENCIA + 1;
+			const query_sequence = result[0].SEQUENCIA;
 			const query_code_ss = result[0].CODIGO_SS?.trim();
 			const query_cabinet = result[0].ARMARIO;
 			const query_status = result[0].STATUS;
@@ -704,113 +704,153 @@ async function insertTreatments(
 			// Query com ou sem o delay de 5 segundos
 			let query2;
 
+			// Inserindo na CADBACKACE2 os dados do select query5
 			if (message_status == "CONTATO WHATSAPP - ENTREGUE") {
-				// Adicionado delay de 5 segundos no status delivered para não ficar igual ao sent
-				query2 = `INSERT INTO CADBACKLA2 (NUMERO,
-                                                  SEQUENCIA,
-                                                  PON,
-                                                  CIDADE,
-                                                  CLUSTER,
-                                                  ARMARIO,
-                                                  CLIENTE,
-                                                  LOGRADOURO,
-                                                  TECNOLOGIA,
-                                                  ABERTURA,
-                                                  INSTANCIA,
-                                                  SERVICO,
-                                                  STATUS,
-                                                  MOTIVO,
-                                                  STATUS_BA,
-                                                  DATA_PROMESSA,
-                                                  DATA_VENDA,
-                                                  DESC_DETALHADA,
-                                                  ABERTURA_AUX,
-                                                  MICRO_AREA,
-                                                  DATA_INJECAO_AUX,
-                                                  ASSISTENTE,
-                                                  DATA_INJECAO,
-                                                  TRATATIVAS,
-                                                  OBSERVACAO,
-                                                  CONTATO_CLIENTE_1)
-                                           VALUES(gen_Id(GEN_BACKLA2, 1),
-                                                  ?,
-                                                  ?,
-                                                  CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  CAST(? AS VARCHAR(25) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(15) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  ?,
-                                                  CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  3973,
-                                                  DATEADD(5 SECOND TO CURRENT_TIMESTAMP),
-                                                  CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  ?)`;
+				query2 = `INSERT INTO CADBACKACE2 (CODIGO, 
+													CODIGO_SS,
+													INSTANCIA, 
+													ARMARIO, 
+													STATUS, 
+													RESPONSAVEL_STATUS, 
+													MOTIVO_STATUS, 
+													DEFEITO, 
+													EMPRESA, 
+													CLUSTER,
+													CIDADE,
+													UF,
+													LOGRADOURO,
+													ABERTURA,
+													VENCIMENTO,
+													TIPO_SS,
+													TIPO_AGENDA,
+													AREA_GVT,
+													GPON,
+													SUPERVISOR,
+													SEGMENTO,
+													PRIMEIRA_AGENDA,
+													ABERTURA_SIEBEL,
+													PREVENTIVA,
+													ABERTURA_AUX,
+													SPLITTER,
+													CAIXA,
+													SPLITTER_2,
+													SECUNDARIO,
+													ASSISTENTE,
+													DATA_INJECAO,
+													TRATATIVAS,
+													SEQUENCIA,
+													DATA_INJECAO_AUX,
+													CONTATO_CLIENTE_1,
+													ID_WHATSAPP)
+											VALUES(gen_Id(GEN_BACKACE2, 1),
+													CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(25) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(20) CHARACTER SET WIN1252), 
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(60) CHARACTER SET WIN1252), 
+													CAST(? AS VARCHAR(60) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(80) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(5) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
+													?,
+													?,
+													CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(100) CHARACTER SET WIN1252),
+													?,
+													CAST(? AS VARCHAR(80) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													?,
+													CAST(? AS VARCHAR(100) CHARACTER SET WIN1252),
+													?,
+													?,
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													?,
+													3973,
+													DATEADD(5 SECOND TO CURRENT_TIMESTAMP),
+													CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
+													?,
+													?,
+													?,
+													?)`;
 			} else {
-				query2 = `INSERT INTO CADBACKLA2 (NUMERO,
-                                                  SEQUENCIA,
-                                                  PON,
-                                                  CIDADE,
-                                                  CLUSTER,
-                                                  ARMARIO,
-                                                  CLIENTE,
-                                                  LOGRADOURO,
-                                                  TECNOLOGIA,
-                                                  ABERTURA,
-                                                  INSTANCIA,
-                                                  SERVICO,
-                                                  STATUS,
-                                                  MOTIVO,
-                                                  STATUS_BA,
-                                                  DATA_PROMESSA,
-                                                  DATA_VENDA,
-                                                  DESC_DETALHADA,
-                                                  ABERTURA_AUX,
-                                                  MICRO_AREA,
-                                                  DATA_INJECAO_AUX,
-                                                  ASSISTENTE,
-                                                  DATA_INJECAO,
-                                                  TRATATIVAS,
-                                                  OBSERVACAO,
-                                                  CONTATO_CLIENTE_1)
-                                           VALUES(gen_Id(GEN_BACKLA2, 1),
-                                                  ?,
-                                                  ?,
-                                                  CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  CAST(? AS VARCHAR(25) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(15) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                  CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  ?,
-                                                  CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  3973,
-                                                  CURRENT_TIMESTAMP,
-                                                  CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
-                                                  ?,
-                                                  ?)`;
+				query2 = `INSERT INTO CADBACKACE2 (CODIGO, 
+													CODIGO_SS,
+													INSTANCIA, 
+													ARMARIO, 
+													STATUS, 
+													RESPONSAVEL_STATUS, 
+													MOTIVO_STATUS, 
+													DEFEITO, 
+													EMPRESA, 
+													CLUSTER,
+													CIDADE,
+													UF,
+													LOGRADOURO,
+													ABERTURA,
+													VENCIMENTO,
+													TIPO_SS,
+													TIPO_AGENDA,
+													AREA_GVT,
+													GPON,
+													SUPERVISOR,
+													SEGMENTO,
+													PRIMEIRA_AGENDA,
+													ABERTURA_SIEBEL,
+													PREVENTIVA,
+													ABERTURA_AUX,
+													SPLITTER,
+													CAIXA,
+													SPLITTER_2,
+													SECUNDARIO,
+													ASSISTENTE,
+													DATA_INJECAO,
+													TRATATIVAS,
+													SEQUENCIA,
+													DATA_INJECAO_AUX,
+													CONTATO_CLIENTE_1,
+													ID_WHATSAPP)
+											VALUES(gen_Id(GEN_BACKACE2, 1),
+													CAST(? AS VARCHAR(20) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(25) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(20) CHARACTER SET WIN1252), 
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(60) CHARACTER SET WIN1252), 
+													CAST(? AS VARCHAR(60) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(80) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(5) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
+													?,
+													?,
+													CAST(? AS VARCHAR(255) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(150) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(100) CHARACTER SET WIN1252),
+													?,
+													CAST(? AS VARCHAR(80) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													?,
+													CAST(? AS VARCHAR(100) CHARACTER SET WIN1252),
+													?,
+													?,
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													CAST(? AS VARCHAR(30) CHARACTER SET WIN1252),
+													?,
+													3973,
+													CURRENT_TIMESTAMP,
+													CAST(? AS VARCHAR(200) CHARACTER SET WIN1252),
+													?,
+													?,
+													?,
+													?)`;
 			}
 			const query2_params = [
 				query_code_ss,
@@ -844,8 +884,8 @@ async function insertTreatments(
 				message_status,
 				query_sequence,
 				injection_date_aux,
-				whatsapp_id,
 				query_contact_verified,
+				whatsapp_id,
 			];
 			const queryAsync2 = promisify(conn.query);
 			await queryAsync2.call(conn, query2, query2_params);
@@ -854,8 +894,6 @@ async function insertTreatments(
 		} else {
 			console.log("Tipo de serviço inválido!");
 		}
-
-		conn.detach();
 	} catch (error) {
 		console.log(error);
 		throw error;
