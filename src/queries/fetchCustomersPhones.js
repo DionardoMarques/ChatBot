@@ -32,7 +32,7 @@ async function fetchCustomersPhones(conn) {
                             AND SUBSTRING(CADBACKLOG.SERVICO FROM 1 FOR 6) = 'DISPON'
                             AND CADBACKLOG.INSTANCIA <> '0'
                             AND CADBACKLOG.CLUSTER = 'CLUSTER PAE'
-                            AND CADCONTATO.DESIGNADOR = 'X'
+                            AND CADCONTATO.DESIGNADOR = 'PAE-8176DW8VFH-013'
                             GROUP BY CADBACKLOG.INSTANCIA,
                                     CADCONTATO.CONTATO_OK,
                                     CADCONTATO.CONTATO,
@@ -64,7 +64,7 @@ async function fetchCustomersPhones(conn) {
                             AND CADBACKTT.STATUS = 'AGENDADA' 
                             AND CADBACKTT.EMPRESA = 'TLSV' 
                             AND CADBACKTT.CLUSTER = 'CLUSTER PAE'
-                            AND CADCONTATO.DESIGNADOR = 'PAE-814T9JA5XI-013'
+                            AND CADCONTATO.DESIGNADOR = 'PAE-816B7JMRVJ-013'
                         GROUP BY CADBACKTT.ISNTANCIA,
                             CADCONTATO.CONTATO_OK,
                             CADCONTATO.CONTATO,
